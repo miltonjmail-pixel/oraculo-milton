@@ -13,3 +13,9 @@ def oraculo():
             yield f"data: {{\"hallazgo\": \"Token #{i+1}\", \"modo\": \"SAFE_MODE\", \"timestamp\": \"{timestamp}\"}}\n\n"
             time.sleep(1)
     return StreamingResponse(generar_eventos(), media_type="text/event-stream")
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    with open("frontend/index.html", encoding="utf-8") as f:
+        return f.read()
