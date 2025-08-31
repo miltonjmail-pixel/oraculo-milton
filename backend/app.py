@@ -1,55 +1,41 @@
-from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse
-from sse_starlette.sse import EventSourceResponse
-import asyncio
-import time
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import json
+import os
 
 app = FastAPI()
 
-# Historial de hallazgos
-hallazgos = []
+# Middleware CORS para permitir acceso desde frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Puedes restringir esto si lo deseas
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Patrullaje activo
-patrullaje_activo = False
+# Token secreto para proteger el endpoint
+TOKEN_SECRETO = "oraculo-privado-2025"
 
-@app.get("/", response_class=HTMLResponse)
-def home():
-    with open("frontend/index.html", encoding="utf-8") as f:
-        return f.read()
-
-@app.post("/iniciar")
-def iniciar(background_tasks: BackgroundTasks):
-    global patrullaje_activo
-    patrullaje_activo = True
-    background_tasks.add_task(patrullar)
-    return {"status": "Patrullaje iniciado"}
-
-@app.post("/detener")
-def detener():
-    global patrullaje_activo
-    patrullaje_activo = False
-    return {"status": "Patrullaje detenido"}
-
+# Ruta protegida para obtener hallazgos
 @app.get("/hallazgos")
-def obtener_hallazgos():
-    return {"hallazgos": hallazgos}
+async def obtener_hallazgos(request: Request):
+    token = request.headers.get("Authorization")
+    if token != f"Bearer {TOKEN_SECRETO}":
+        raise HTTPException(status_code=403, detail="Acceso denegado")
 
-@app.get("/stream")
-async def stream():
-    async def event_generator():
-        last_index = 0
-        while True:
-            if last_index < len(hallazgos):
-                yield {
-                    "event": "hallazgo",
-                    "data": hallazgos[last_index]
-                }
-                last_index += 1
-            await asyncio.sleep(1)
-    return EventSourceResponse(event_generator())
+    ruta_archivo = os.path.join(os.path.dirname(__file__), "hallazgos.json")
+    if not os.path.exists(ruta_archivo):
+        raise HTTPException(status_code=404, detail="Archivo de hallazgos no encontrado")
 
-def patrullar():
-    while patrullaje_activo:
-        hallazgo = f"Hallazgo #{len(hallazgos)+1} @ {time.strftime('%H:%M:%S')}"
-        hallazgos.append(hallazgo)
-        time.sleep(5)
+    try:
+        with open(ruta_archivo, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return JSONResponse(content=data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al leer hallazgos: {str(e)}")
+
+# Ruta raíz opcional para verificar que el backend está activo
+@app.get("/")
+def root():
+    return {"status": "oráculo activo", "versión": "1.0.0"}
