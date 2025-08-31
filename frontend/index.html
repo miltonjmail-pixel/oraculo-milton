@@ -2,12 +2,28 @@
 <html>
 <head>
   <title>Oráculo Milton</title>
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Panel Oracular</h1>
   <button onclick="iniciar()">Iniciar Patrullaje</button>
-  <div id="resultados"></div>
-  <script src="script.js"></script>
+  <button onclick="detener()">Detener Patrullaje</button>
+  <ul id="hallazgos"></ul>
+
+  <script>
+    function iniciar() {
+      fetch("/iniciar", { method: "POST" });
+    }
+
+    function detener() {
+      fetch("/detener", { method: "POST" });
+    }
+
+    const evtSource = new EventSource("/stream");
+    evtSource.addEventListener("hallazgo", function(event) {
+      const li = document.createElement("li");
+      li.textContent = event.data;
+      document.getElementById("hallazgos").appendChild(li);
+    });
+  </script>
 </body>
 </html>
