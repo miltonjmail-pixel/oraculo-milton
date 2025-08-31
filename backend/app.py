@@ -1,41 +1,88 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-import json
-import os
+import json, time, hashlib, asyncio
+from datetime import datetime
 
 app = FastAPI()
 
-# Middleware CORS para permitir acceso desde frontend
+# CORS para frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puedes restringir esto si lo deseas
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Token secreto para proteger el endpoint
-TOKEN_SECRETO = "oraculo-privado-2025"
+# 🔁 Patrullaje activo
+patrullaje_activo = True
 
-# Ruta protegida para obtener hallazgos
-@app.get("/hallazgos")
-async def obtener_hallazgos(request: Request):
-    token = request.headers.get("Authorization")
-    if token != f"Bearer {TOKEN_SECRETO}":
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+# 🔄 Ciclo de patrullaje
+async def patrullar():
+    zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
+    while patrullaje_activo:
+        for zona in zonas:
+            evento = detectar_evento(zona)
+            if evento:
+                hallazgo = registrar_hallazgo(zona, evento, "Alta", "patrullaje.py")
+                await emitir_evento(hallazgo)
+        await asyncio.sleep(10)
 
-    ruta_archivo = os.path.join(os.path.dirname(__file__), "hallazgos.json")
-    if not os.path.exists(ruta_archivo):
-        raise HTTPException(status_code=404, detail="Archivo de hallazgos no encontrado")
+# 🧠 Detección real (puedes conectar sensores o APIs aquí)
+def detectar_evento(zona):
+    # Aquí puedes usar lógica real: sensores, APIs, etc.
+    return "Token detectado"  # Solo si es real
 
+# 📝 Registro con hash y trazabilidad
+def registrar_hallazgo(zona, evento, prioridad, origen):
+    timestamp = datetime.utcnow().isoformat()
+    raw = f"{timestamp}-{zona}-{evento}"
+    hash_id = hashlib.sha256(raw.encode()).hexdigest()[:12]
+    nuevo = {
+        "id": f"HX-{timestamp[:10].replace('-', '')}-{hash_id}",
+        "timestamp": timestamp,
+        "zona": zona,
+        "evento": evento,
+        "prioridad": prioridad,
+        "origen": origen,
+        "hash": hash_id
+    }
+
+    ruta = "backend/hallazgos.json"
     try:
-        with open(ruta_archivo, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return JSONResponse(content=data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al leer hallazgos: {str(e)}")
+        with open(ruta, "r", encoding="utf-8") as f:
+            datos = json.load(f)
+    except:
+        datos = []
 
-# Ruta raíz opcional para verificar que el backend está activo
+    datos.append(nuevo)
+    with open(ruta, "w", encoding="utf-8") as f:
+        json.dump(datos, f, indent=2)
+
+    return nuevo
+
+# 📡 Emisión SSE al frontend
+async def evento_generator():
+    global eventos_sse
+    eventos_sse = asyncio.Queue()
+    while True:
+        evento = await eventos_sse.get()
+        yield f"data: {json.dumps(evento)}\n\n"
+
+async def emitir_evento(evento):
+    await eventos_sse.put(evento)
+
+@app.get("/stream")
+async def stream():
+    return StreamingResponse(evento_generator(), media_type="text/event-stream")
+
+# 🚀 Activar patrullaje desde frontend
+@app.post("/iniciar-patrullaje")
+async def iniciar(background_tasks: BackgroundTasks):
+    background_tasks.add_task(patrullar)
+    return {"status": "Patrullaje iniciado"}
+
+# 🧪 Endpoint de prueba
 @app.get("/")
 def root():
-    return {"status": "oráculo activo", "versión": "1.0.0"}
+    return {"status": "Sistema oracular activo"}
