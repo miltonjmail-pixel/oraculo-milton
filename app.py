@@ -62,15 +62,20 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
 
     ruta = Path("backend/hallazgos.json")
     datos = []
+
     if ruta.exists():
         try:
             with ruta.open("r", encoding="utf-8") as f:
-                datos = json.load(f)
+                contenido = json.load(f)
+                if isinstance(contenido, list):
+                    datos = contenido
+                else:
+                    print("[WARN] hallazgos.json no es una lista. Se reinicia.")
         except Exception as e:
             print(f"[ERROR] Fallo al leer hallazgos.json: {e}")
-            datos = []
 
     datos.append(nuevo)
+
     try:
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(datos, f, indent=2)
