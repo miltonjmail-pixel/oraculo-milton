@@ -31,26 +31,43 @@ function detenerPatrullaje() {
 }
 
 // Estado inicial al cargar
-fetch("/estado")
-  .then(res => res.json())
-  .then(data => {
-    const estado = data.patrullaje ? "Patrullaje en curso ✅" : "Sin patrullaje activo ⛔";
-    actualizarEstado(estado);
-  })
-  .catch(err => {
-    actualizarEstado("Estado desconocido ⚠️");
-    console.error("Error al consultar estado:", err);
-  });
+function consultarEstado() {
+  fetch("/estado")
+    .then(res => res.json())
+    .then(data => {
+      const estado = data.patrullaje ? "Patrullaje en curso ✅" : "Sin patrullaje activo ⛔";
+      actualizarEstado(estado);
+    })
+    .catch(err => {
+      actualizarEstado("Estado desconocido ⚠️");
+      console.error("Error al consultar estado:", err);
+    });
+}
 
 // Eventos SSE
-const eventSource = new EventSource("/stream");
-eventSource.onmessage = function (event) {
-  try {
-    const h = JSON.parse(event.data);
-    const li = document.createElement("li");
-    li.textContent = `${h.id} | ${h.timestamp} | ${h.zona} | ${h.evento} | ${h.hash}`;
-    document.getElementById("hallazgos").prepend(li);
-  } catch (err) {
-    console.error("Error al procesar evento SSE:", err);
-  }
-};
+function iniciarSSE() {
+  const eventSource = new EventSource("/stream");
+
+  eventSource.onmessage = function (event) {
+    try {
+      const h = JSON.parse(event.data);
+      const li = document.createElement("li");
+      li.textContent = `${h.id} | ${h.timestamp} | ${h.zona} | ${h.evento} | ${h.hash}`;
+      document.getElementById("hallazgos").prepend(li);
+    } catch (err) {
+      console.error("Error al procesar evento SSE:", err);
+    }
+  };
+
+  eventSource.onerror = function (err) {
+    console.error("Error en conexión SSE:", err);
+    eventSource.close();
+    setTimeout(iniciarSSE, 5000); // 🔁 Reintento automático
+  };
+}
+
+// Inicialización al cargar la página
+document.addEventListener("DOMContentLoaded", () => {
+  consultarEstado();
+  iniciarSSE();
+});
