@@ -1,1 +1,2 @@
-[]
+import os
+RUTA_LOGS = os.path.join(os.path.dirname(__file__), "..", "logs.json")
