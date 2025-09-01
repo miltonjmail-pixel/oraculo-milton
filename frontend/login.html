@@ -1,15 +1,156 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Login Oracular</title>
+  <title>Dashboard Oracular Urbano</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+    header {
+      background-color: #0078D4;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logout-btn {
+      background-color: #fff;
+      color: #0078D4;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .logout-btn:hover {
+      background-color: #e0e0e0;
+    }
+    main {
+      padding: 2rem;
+    }
+    .status {
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    .hallazgos-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    .hallazgos-table th, .hallazgos-table td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    .hallazgos-table th {
+      background-color: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
-  <h2>Acceso al Panel Oracular</h2>
-  <form action="/login" method="post">
-    <input type="text" name="username" placeholder="Usuario" required>
-    <input type="password" name="password" placeholder="Contraseña" required>
-    <button type="submit">Ingresar</button>
-  </form>
+  <header>
+    <div>📊 Dashboard Oracular Urbano</div>
+    <div>
+      👤 Usuario: <span id="usuario">Cargando...</span>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="status">
+      Patrullaje activo ✅<br>
+      Última ejecución: <span id="ultima-ejecucion">Cargando...</span>
+    </div>
+
+    <button onclick="iniciarPatrullaje()">Iniciar Patrullaje</button>
+    <button onclick="detenerPatrullaje()">Detener Patrullaje</button>
+
+    <h3>Distribución de hallazgos por zona</h3>
+    <canvas id="grafica-zonas" width="600" height="300"></canvas>
+
+    <h3>Hallazgos recientes</h3>
+    <table class="hallazgos-table" id="tabla-hallazgos">
+      <thead>
+        <tr>
+          <th>Zona</th>
+          <th>Tipo</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Control de sesión
+    fetch('/session')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.authenticated) {
+          window.location.href = '/login';
+        } else {
+          document.getElementById('usuario').textContent = data.username;
+        }
+      });
+
+    // Última ejecución
+    fetch('/ultima-ejecucion')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('ultima-ejecucion').textContent = data.timestamp;
+      });
+
+    // Hallazgos recientes
+    fetch('/hallazgos-recientes')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.querySelector('#tabla-hallazgos tbody');
+        data.forEach(h => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${h.zona}</td><td>${h.tipo}</td><td>${h.timestamp}</td>`;
+          tbody.appendChild(row);
+        });
+      });
+
+    // Logout
+    function logout() {
+      fetch('/logout', { method: 'POST' })
+        .then(() => window.location.href = '/login');
+    }
+
+    // Patrullaje (placeholder)
+    function iniciarPatrullaje() {
+      fetch('/patrullaje/start', { method: 'POST' });
+    }
+
+    function detenerPatrullaje() {
+      fetch('/patrullaje/stop', { method: 'POST' });
+    }
+
+    // Gráfica de zonas (placeholder)
+    const ctx = document.getElementById('grafica-zonas').getContext('2d');
+    const grafica = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Zona A', 'Zona B', 'Zona C'],
+        datasets: [{
+          label: 'Hallazgos',
+          data: [12, 19, 7],
+          backgroundColor: '#0078D4'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  </script>
 </body>
 </html>
