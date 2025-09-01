@@ -7,6 +7,12 @@ function iniciarPatrullaje() {
     });
 }
 
+function detenerPatrullaje() {
+  fetch("/detener-patrullaje", { method: "POST" })
+    .then(res => res.json())
+    .then(data => console.log("Patrullaje detenido:", data));
+}
+
 fetch("/estado")
   .then(res => res.json())
   .then(data => {
