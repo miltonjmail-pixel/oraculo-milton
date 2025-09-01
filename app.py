@@ -23,28 +23,57 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 patrullaje_activo = False
 eventos_sse = asyncio.Queue()
 
+# 📓 Logging estructurado
+def registrar_log(tipo, mensaje, extra=None):
+    ruta = Path("backend/logs.json")
+    log = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "tipo": tipo,
+        "mensaje": mensaje,
+        "extra": extra or {}
+    }
+    try:
+        if ruta.exists():
+            with ruta.open("r", encoding="utf-8") as f:
+                contenido = json.load(f)
+                if not isinstance(contenido, list):
+                    contenido = []
+        else:
+            contenido = []
+        contenido.append(log)
+        with ruta.open("w", encoding="utf-8") as f:
+            json.dump(contenido, f, indent=2)
+    except Exception as e:
+        print(f"[ERROR] Fallo al registrar log: {e}")
+
 # 🔍 Patrullaje
 async def patrullar():
     global patrullaje_activo
     patrullaje_activo = True
+    registrar_log("sistema", "Patrullaje iniciado")
+
     try:
-    with open("backend/zonas.json", "r", encoding="utf-8") as f:
-        zonas = json.load(f)
-    if not isinstance(zonas, list):
-        print("[WARN] zonas.json no es una lista. Se usa fallback.")
+        with open("backend/zonas.json", "r", encoding="utf-8") as f:
+            zonas = json.load(f)
+        if not isinstance(zonas, list):
+            print("[WARN] zonas.json no es una lista. Se usa fallback.")
+            registrar_log("advertencia", "zonas.json no es una lista")
+            zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
+    except Exception as e:
+        print(f"[ERROR] Fallo al cargar zonas.json: {e}")
+        registrar_log("error", "Fallo al cargar zonas.json", {"error": str(e)})
         zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
-except Exception as e:
-    print(f"[ERROR] Fallo al cargar zonas.json: {e}")
-    zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
 
     while patrullaje_activo:
         for zona in zonas:
             print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")
+            registrar_log("patrullaje", "Zona patrullada", {"zona": zona})
             evento = detectar_evento(zona)
             if evento:
                 hallazgo = registrar_hallazgo(zona, evento, "Alta", "patrullaje.py")
                 if hallazgo and isinstance(hallazgo, dict):
                     await emitir_evento(hallazgo)
+                    registrar_log("hallazgo", "Evento registrado", hallazgo)
         await asyncio.sleep(10)
 
 def detectar_evento(zona):
@@ -75,8 +104,10 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
                     datos = contenido
                 else:
                     print("[WARN] hallazgos.json no es una lista. Se reinicia.")
+                    registrar_log("advertencia", "hallazgos.json no es una lista")
         except Exception as e:
             print(f"[ERROR] Fallo al leer hallazgos.json: {e}")
+            registrar_log("error", "Fallo al leer hallazgos.json", {"error": str(e)})
 
     datos.append(nuevo)
 
@@ -85,6 +116,7 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
             json.dump(datos, f, indent=2)
     except Exception as e:
         print(f"[ERROR] Fallo al escribir hallazgos.json: {e}")
+        registrar_log("error", "Fallo al escribir hallazgos.json", {"error": str(e)})
 
     return nuevo
 
@@ -96,6 +128,7 @@ async def evento_generator():
                 yield f"data: {json.dumps(evento)}\n\n"
         except Exception as e:
             print(f"[ERROR] evento_generator: {e}")
+            registrar_log("error", "Error en evento_generator", {"error": str(e)})
             continue
 
 async def emitir_evento(evento):
@@ -125,6 +158,7 @@ async def iniciar(background_tasks: BackgroundTasks):
 def detener():
     global patrullaje_activo
     patrullaje_activo = False
+    registrar_log("sistema", "Patrullaje detenido")
     return {"status": "Patrullaje detenido"}
 
 @app.get("/estado")
@@ -137,8 +171,11 @@ def login(username: str = Form(...), password: str = Form(...)):
         with open("users/credenciales.json", "r", encoding="utf-8") as f:
             usuarios = json.load(f)
     except FileNotFoundError:
+        registrar_log("error", "Archivo de credenciales no encontrado")
         return HTMLResponse(content="<h3>Error: archivo de credenciales no encontrado</h3>", status_code=500)
 
     if usuarios.get(username) == password:
+        registrar_log("acceso", "Login exitoso", {"usuario": username})
         return RedirectResponse(url="/panel", status_code=302)
+    registrar_log("acceso", "Login fallido", {"usuario": username})
     return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
