@@ -1,2 +1,37 @@
+import json
 import os
-RUTA_LOGS = os.path.join(os.path.dirname(__file__), "..", "logs.json")
+from datetime import datetime
+from fastapi import Request
+
+LOG_PATH = "main/logs.json"
+
+def registrar_evento(request: Request, status_code: int):
+    ip = request.client.host
+    metodo = request.method
+    ruta = request.url.path
+    query = str(request.url.query)
+    timestamp = datetime.utcnow().isoformat()
+
+    evento = {
+        "ip": ip,
+        "timestamp": timestamp,
+        "metodo": metodo,
+        "ruta": ruta + ("?" + query if query else ""),
+        "status": status_code
+    }
+
+    # Cargar logs existentes
+    if os.path.exists(LOG_PATH):
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            try:
+                logs = json.load(f)
+            except json.JSONDecodeError:
+                logs = []
+    else:
+        logs = []
+
+    logs.append(evento)
+
+    # Guardar
+    with open(LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(logs, f, indent=2, ensure_ascii=False)
