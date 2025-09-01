@@ -12,3 +12,13 @@
   <script src="app.js"></script>
 </body>
 </html>
+// Cargar hallazgos históricos al iniciar
+fetch("backend/hallazgos.json")
+  .then(res => res.json())
+  .then(data => {
+    data.reverse().forEach(h => {
+      const li = document.createElement("li");
+      li.textContent = `${h.id} | ${h.timestamp} | ${h.zona} | ${h.evento} | ${h.hash}`;
+      document.getElementById("hallazgos").appendChild(li);
+    });
+  });
