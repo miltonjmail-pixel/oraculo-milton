@@ -1,0 +1,13 @@
+[
+  {
+    "timestamp": "2025-09-01T19:02:11.174Z",
+    "hallazgo_id": "HX-20250901-a3c75e9822a4",
+    "zona": "Nodo 12",
+    "tipo_activo": "wallet",
+    "estado": "inactiva",
+    "saldo": 0.034,
+    "moneda": "ETH",
+    "hash": "a3c75e9822a4",
+    "origen": "patrullaje.py"
+  }
+]
