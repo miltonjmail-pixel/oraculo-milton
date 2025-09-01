@@ -1,20 +1,9 @@
-[
-  {
-    "id": "HX-20250831-001",
-    "timestamp": "2025-08-31T13:22:45",
-    "zona": "Nodo 7",
-    "evento": "Token detectado",
-    "prioridad": "Alta",
-    "origen": "patrullaje.py",
-    "hash": "a7f9c3e2b1..."
-  },
-  {
-    "id": "HX-20250831-002",
-    "timestamp": "2025-08-31T13:28:10",
-    "zona": "Nodo 3",
-    "evento": "Anomalía de tráfico",
-    "prioridad": "Media",
-    "origen": "monitor.py",
-    "hash": "c1d8e4a9f0..."
-  }
-]
+{
+  "id": "HX-20250831-abc123def456",
+  "timestamp": "2025-08-31T18:32:44.123Z",
+  "zona": "Nodo 12",
+  "evento": "Token detectado",
+  "prioridad": "Alta",
+  "origen": "patrullaje.py",
+  "hash": "abc123def456"
+}
