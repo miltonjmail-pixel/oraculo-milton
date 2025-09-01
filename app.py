@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Request, BackgroundTasks, Form
-from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import json, time, hashlib, asyncio
 from datetime import datetime
 
 app = FastAPI()
 
+# 🛡️ CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,17 +16,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 📁 Archivos estáticos
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+# 🔄 Estado global
 patrullaje_activo = False
 eventos_sse = asyncio.Queue()
 
-# 🔄 Patrullaje
+# 🔍 Patrullaje
 async def patrullar():
     global patrullaje_activo
     patrullaje_activo = True
     try:
         with open("backend/zonas.json", "r", encoding="utf-8") as f:
             zonas = json.load(f)
-    except:
+    except FileNotFoundError:
         zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
 
     while patrullaje_activo:
@@ -51,15 +58,14 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
         "hash": hash_id
     }
 
-    ruta = "backend/hallazgos.json"
-    try:
-        with open(ruta, "r", encoding="utf-8") as f:
+    ruta = Path("backend/hallazgos.json")
+    datos = []
+    if ruta.exists():
+        with ruta.open("r", encoding="utf-8") as f:
             datos = json.load(f)
-    except:
-        datos = []
 
     datos.append(nuevo)
-    with open(ruta, "w", encoding="utf-8") as f:
+    with ruta.open("w", encoding="utf-8") as f:
         json.dump(datos, f, indent=2)
 
     return nuevo
@@ -72,7 +78,11 @@ async def evento_generator():
 async def emitir_evento(evento):
     await eventos_sse.put(evento)
 
-from fastapi.responses import FileResponse
+# 🌐 Endpoints
+
+@app.get("/")
+def root():
+    return {"status": "Sistema oracular activo"}
 
 @app.get("/panel")
 def mostrar_panel():
@@ -99,13 +109,12 @@ def estado():
 
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
-    with open("users/credenciales.json", "r", encoding="utf-8") as f:
-        usuarios = json.load(f)
-    if usuarios.get(username) == password:
-        return RedirectResponse(url="/frontend/index.html", status_code=302)
-    return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
+    try:
+        with open("users/credenciales.json", "r", encoding="utf-8") as f:
+            usuarios = json.load(f)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h3>Error: archivo de credenciales no encontrado</h3>", status_code=500)
 
-@app.get("/")
-def root():
-    return {"status": "Sistema oracular activo"}
-from fastapi.responses import FileResponse
+    if usuarios.get(username) == password:
+        return RedirectResponse(url="/panel", status_code=302)
+    return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
