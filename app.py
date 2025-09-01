@@ -28,10 +28,14 @@ async def patrullar():
     global patrullaje_activo
     patrullaje_activo = True
     try:
-        with open("backend/zonas.json", "r", encoding="utf-8") as f:
-            zonas = json.load(f)
-    except FileNotFoundError:
+    with open("backend/zonas.json", "r", encoding="utf-8") as f:
+        zonas = json.load(f)
+    if not isinstance(zonas, list):
+        print("[WARN] zonas.json no es una lista. Se usa fallback.")
         zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
+except Exception as e:
+    print(f"[ERROR] Fallo al cargar zonas.json: {e}")
+    zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
 
     while patrullaje_activo:
         for zona in zonas:
