@@ -17,3 +17,15 @@ def test_json_malformado(tmp_path):
 def test_archivo_inexistente():
     resultado = cargar_json_seguro("ruta/falsa.json")
     assert resultado is None
+
+from validar_credenciales import validar_credenciales
+
+def test_login():
+    assert validar_credenciales("milton", "adminpass") == True
+    assert validar_credenciales("admin", "1234") == True
+    assert validar_credenciales("milton", "wrongpass") == False
+    assert validar_credenciales("noexiste", "1234") == False
+
+if __name__ == "__main__":
+    test_login()
+    print("✅ Validación de credenciales funcionando correctamente")
