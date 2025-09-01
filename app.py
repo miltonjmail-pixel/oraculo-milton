@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, BackgroundTasks, Form
-from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -22,6 +22,7 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 # 🔄 Estado global
 patrullaje_activo = False
 eventos_sse = asyncio.Queue()
+session = {"authenticated": False, "username": None}
 
 # 📓 Logging estructurado
 def registrar_log(tipo, mensaje, extra=None):
@@ -56,22 +57,19 @@ async def patrullar():
         with open("backend/zonas.json", "r", encoding="utf-8") as f:
             zonas = json.load(f)
         if not isinstance(zonas, list):
-            print("[WARN] zonas.json no es una lista. Se usa fallback.")
-            registrar_log("advertencia", "zonas.json no es una lista")
             zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
+            registrar_log("advertencia", "zonas.json no es una lista")
     except Exception as e:
-        print(f"[ERROR] Fallo al cargar zonas.json: {e}")
-        registrar_log("error", "Fallo al cargar zonas.json", {"error": str(e)})
         zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
+        registrar_log("error", "Fallo al cargar zonas.json", {"error": str(e)})
 
     while patrullaje_activo:
         for zona in zonas:
-            print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")
             registrar_log("patrullaje", "Zona patrullada", {"zona": zona})
             evento = detectar_evento(zona)
             if evento:
                 hallazgo = registrar_hallazgo(zona, evento, "Alta", "patrullaje.py")
-                if hallazgo and isinstance(hallazgo, dict):
+                if hallazgo:
                     await emitir_evento(hallazgo)
                     registrar_log("hallazgo", "Evento registrado", hallazgo)
         await asyncio.sleep(10)
@@ -102,11 +100,7 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
                 contenido = json.load(f)
                 if isinstance(contenido, list):
                     datos = contenido
-                else:
-                    print("[WARN] hallazgos.json no es una lista. Se reinicia.")
-                    registrar_log("advertencia", "hallazgos.json no es una lista")
         except Exception as e:
-            print(f"[ERROR] Fallo al leer hallazgos.json: {e}")
             registrar_log("error", "Fallo al leer hallazgos.json", {"error": str(e)})
 
     datos.append(nuevo)
@@ -115,7 +109,6 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(datos, f, indent=2)
     except Exception as e:
-        print(f"[ERROR] Fallo al escribir hallazgos.json: {e}")
         registrar_log("error", "Fallo al escribir hallazgos.json", {"error": str(e)})
 
     return nuevo
@@ -124,16 +117,13 @@ async def evento_generator():
     while True:
         try:
             evento = await eventos_sse.get()
-            if evento and isinstance(evento, dict):
+            if evento:
                 yield f"data: {json.dumps(evento)}\n\n"
         except Exception as e:
-            print(f"[ERROR] evento_generator: {e}")
             registrar_log("error", "Error en evento_generator", {"error": str(e)})
-            continue
 
 async def emitir_evento(evento):
-    if evento and isinstance(evento, dict):
-        await eventos_sse.put(evento)
+    await eventos_sse.put(evento)
 
 # 🌐 Endpoints
 
@@ -143,6 +133,8 @@ def root():
 
 @app.get("/panel")
 def mostrar_panel():
+    if not session["authenticated"]:
+        return RedirectResponse(url="/login", status_code=302)
     return FileResponse("frontend/index.html")
 
 @app.get("/stream")
@@ -175,7 +167,51 @@ def login(username: str = Form(...), password: str = Form(...)):
         return HTMLResponse(content="<h3>Error: archivo de credenciales no encontrado</h3>", status_code=500)
 
     if usuarios.get(username) == password:
+        session["authenticated"] = True
+        session["username"] = username
         registrar_log("acceso", "Login exitoso", {"usuario": username})
         return RedirectResponse(url="/panel", status_code=302)
+
     registrar_log("acceso", "Login fallido", {"usuario": username})
-    return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
+    return RedirectResponse(url="/login?error=1", status_code=302)
+
+@app.post("/logout")
+def logout():
+    session["authenticated"] = False
+    session["username"] = None
+    registrar_log("acceso", "Logout", {})
+    return JSONResponse(content={"status": "logout"})
+
+@app.get("/session")
+def get_session():
+    return JSONResponse(content={
+        "authenticated": session["authenticated"],
+        "username": session["username"]
+    })
+
+@app.get("/ultima-ejecucion")
+def ultima_ejecucion():
+    ruta = Path("backend/logs.json")
+    if ruta.exists():
+        try:
+            with ruta.open("r", encoding="utf-8") as f:
+                logs = json.load(f)
+                ejecuciones = [l for l in logs if l["tipo"] == "sistema" and "Patrullaje iniciado" in l["mensaje"]]
+                if ejecuciones:
+                    return {"timestamp": ejecuciones[-1]["timestamp"]}
+        except Exception as e:
+            registrar_log("error", "Fallo al leer logs.json", {"error": str(e)})
+    return {"timestamp": "No disponible"}
+
+@app.get("/hallazgos-recientes")
+def hallazgos_recientes():
+    ruta = Path("backend/hallazgos.json")
+    if ruta.exists():
+        try:
+            with ruta.open("r", encoding="utf-8") as f:
+                datos = json.load(f)
+                recientes = sorted(datos, key=lambda x: x["timestamp"], reverse=True)[:10]
+                return recientes
+        except Exception as e:
+            registrar_log("error", "Fallo al leer hallazgos.json", {"error": str(e)})
+    return []
