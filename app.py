@@ -118,3 +118,4 @@ def login(username: str = Form(...), password: str = Form(...)):
     if usuarios.get(username) == password:
         return RedirectResponse(url="/panel", status_code=302)
     return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
+print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")
