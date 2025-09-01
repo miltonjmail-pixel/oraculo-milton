@@ -101,3 +101,9 @@ from fastapi.responses import FileResponse
 @app.get("/panel")
 def mostrar_panel():
     return FileResponse("frontend/index.html")
+
+@app.post("/detener-patrullaje")
+def detener():
+    global patrullaje_activo
+    patrullaje_activo = False
+    return {"status": "Patrullaje detenido"}
