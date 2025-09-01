@@ -35,11 +35,12 @@ async def patrullar():
 
     while patrullaje_activo:
         for zona in zonas:
-            print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")  # ✅ Ajustado dentro del ciclo
+            print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")
             evento = detectar_evento(zona)
             if evento:
                 hallazgo = registrar_hallazgo(zona, evento, "Alta", "patrullaje.py")
-                await emitir_evento(hallazgo)
+                if hallazgo and isinstance(hallazgo, dict):
+                    await emitir_evento(hallazgo)
         await asyncio.sleep(10)
 
 def detectar_evento(zona):
@@ -62,22 +63,35 @@ def registrar_hallazgo(zona, evento, prioridad, origen):
     ruta = Path("backend/hallazgos.json")
     datos = []
     if ruta.exists():
-        with ruta.open("r", encoding="utf-8") as f:
-            datos = json.load(f)
+        try:
+            with ruta.open("r", encoding="utf-8") as f:
+                datos = json.load(f)
+        except Exception as e:
+            print(f"[ERROR] Fallo al leer hallazgos.json: {e}")
+            datos = []
 
     datos.append(nuevo)
-    with ruta.open("w", encoding="utf-8") as f:
-        json.dump(datos, f, indent=2)
+    try:
+        with ruta.open("w", encoding="utf-8") as f:
+            json.dump(datos, f, indent=2)
+    except Exception as e:
+        print(f"[ERROR] Fallo al escribir hallazgos.json: {e}")
 
     return nuevo
 
 async def evento_generator():
     while True:
-        evento = await eventos_sse.get()
-        yield f"data: {json.dumps(evento)}\n\n"
+        try:
+            evento = await eventos_sse.get()
+            if evento and isinstance(evento, dict):
+                yield f"data: {json.dumps(evento)}\n\n"
+        except Exception as e:
+            print(f"[ERROR] evento_generator: {e}")
+            continue
 
 async def emitir_evento(evento):
-    await eventos_sse.put(evento)
+    if evento and isinstance(evento, dict):
+        await eventos_sse.put(evento)
 
 # 🌐 Endpoints
 
