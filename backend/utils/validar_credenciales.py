@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 
+# Rutas absolutas relativas al proyecto
 RUTA_CREDENCIALES = os.path.join(os.path.dirname(__file__), "..", "data", "credenciales.json")
 RUTA_LOGS = os.path.join(os.path.dirname(__file__), "..", "logs.json")
 
