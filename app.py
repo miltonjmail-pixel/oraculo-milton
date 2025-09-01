@@ -81,6 +81,12 @@ async def iniciar(background_tasks: BackgroundTasks):
     background_tasks.add_task(patrullar)
     return {"status": "Patrullaje iniciado"}
 
+@app.post("/detener-patrullaje")
+def detener():
+    global patrullaje_activo
+    patrullaje_activo = False
+    return {"status": "Patrullaje detenido"}
+
 @app.get("/estado")
 def estado():
     return {"patrullaje": patrullaje_activo}
