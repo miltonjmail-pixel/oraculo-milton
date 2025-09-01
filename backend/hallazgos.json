@@ -1,9 +1,1 @@
-{
-  "id": "HX-20250831-abc123def456",
-  "timestamp": "2025-08-31T18:32:44.123Z",
-  "zona": "Nodo 12",
-  "evento": "Token detectado",
-  "prioridad": "Alta",
-  "origen": "patrullaje.py",
-  "hash": "abc123def456"
-}
+[]
