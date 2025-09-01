@@ -2,12 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel Oracular</title>
+  <title>Dashboard Oracular</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 2rem;
-      background-color: #f9f9f9;
+      background-color: #f0f4f8;
     }
     h1 {
       color: #333;
@@ -22,30 +23,25 @@
       font-size: 1rem;
       cursor: pointer;
     }
-    ul#hallazgos {
+    canvas {
+      max-width: 600px;
       margin-top: 2rem;
-      padding-left: 0;
-      list-style: none;
-    }
-    ul#hallazgos li {
       background: #fff;
       border: 1px solid #ccc;
-      padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      font-family: monospace;
+      padding: 1rem;
     }
   </style>
 </head>
 <body>
-  <h1>Panel Oracular Urbano</h1>
+  <h1>Dashboard Oracular Urbano</h1>
 
   <p id="estado">Verificando estado...</p>
 
   <button onclick="iniciarPatrullaje()">Iniciar Patrullaje</button>
   <button onclick="detenerPatrullaje()">Detener Patrullaje</button>
 
-  <h3>Hallazgos en tiempo real</h3>
-  <ul id="hallazgos"></ul>
+  <h3>Distribución de hallazgos por zona</h3>
+  <canvas id="graficoZonas"></canvas>
 
   <script>
     // 🔄 Estado del patrullaje
@@ -60,28 +56,52 @@
       }
     }
 
-    // ▶️ Iniciar patrullaje
     async function iniciarPatrullaje() {
       await fetch("/iniciar-patrullaje", { method: "POST" });
       actualizarEstado();
     }
 
-    // ⏹️ Detener patrullaje
     async function detenerPatrullaje() {
       await fetch("/detener-patrullaje", { method: "POST" });
       actualizarEstado();
     }
 
+    // 📊 Configuración inicial del gráfico
+    const ctx = document.getElementById("graficoZonas").getContext("2d");
+    const datosZonas = {};
+    const grafico = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Hallazgos por zona",
+          data: [],
+          backgroundColor: "#007bff"
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
     // 📡 Escuchar eventos SSE
     const source = new EventSource("/stream");
     source.onmessage = function (event) {
       const data = JSON.parse(event.data);
-      const li = document.createElement("li");
-      li.textContent = `[${data.timestamp}] ${data.zona} → ${data.evento} (${data.prioridad})`;
-      document.getElementById("hallazgos").prepend(li);
+      const zona = data.zona;
+
+      if (!datosZonas[zona]) {
+        datosZonas[zona] = 0;
+        grafico.data.labels.push(zona);
+      }
+      datosZonas[zona]++;
+      grafico.data.datasets[0].data = grafico.data.labels.map(z => datosZonas[z]);
+      grafico.update();
     };
 
-    // ⏱️ Estado inicial
     actualizarEstado();
   </script>
 </body>
