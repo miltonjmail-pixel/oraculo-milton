@@ -1,1 +1,3 @@
-["Nodo 3", "Nodo 7", "Nodo 12"]
+if not isinstance(zonas, list):
+    print("[WARN] zonas.json no es una lista. Se usa fallback.")
+    zonas = ["Nodo 3", "Nodo 7", "Nodo 12"]
