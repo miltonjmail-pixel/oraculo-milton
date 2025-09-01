@@ -35,6 +35,7 @@ async def patrullar():
 
     while patrullaje_activo:
         for zona in zonas:
+            print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")  # ✅ Ajustado dentro del ciclo
             evento = detectar_evento(zona)
             if evento:
                 hallazgo = registrar_hallazgo(zona, evento, "Alta", "patrullaje.py")
@@ -118,4 +119,3 @@ def login(username: str = Form(...), password: str = Form(...)):
     if usuarios.get(username) == password:
         return RedirectResponse(url="/panel", status_code=302)
     return HTMLResponse(content="<h3>Acceso denegado</h3>", status_code=401)
-print(f"[{datetime.utcnow()}] Patrullando zona: {zona}")
