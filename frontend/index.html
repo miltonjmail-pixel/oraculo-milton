@@ -47,7 +47,42 @@
   <h3>Hallazgos en tiempo real</h3>
   <ul id="hallazgos"></ul>
 
-  <!-- ✅ Ruta corregida para app.js -->
-  <script src="/static/app.js"></script>
+  <script>
+    // 🔄 Estado del patrullaje
+    async function actualizarEstado() {
+      try {
+        const res = await fetch("/estado");
+        const data = await res.json();
+        document.getElementById("estado").textContent =
+          data.patrullaje ? "Patrullaje activo ✅" : "Patrullaje detenido ⛔";
+      } catch (e) {
+        document.getElementById("estado").textContent = "Error al consultar estado";
+      }
+    }
+
+    // ▶️ Iniciar patrullaje
+    async function iniciarPatrullaje() {
+      await fetch("/iniciar-patrullaje", { method: "POST" });
+      actualizarEstado();
+    }
+
+    // ⏹️ Detener patrullaje
+    async function detenerPatrullaje() {
+      await fetch("/detener-patrullaje", { method: "POST" });
+      actualizarEstado();
+    }
+
+    // 📡 Escuchar eventos SSE
+    const source = new EventSource("/stream");
+    source.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+      const li = document.createElement("li");
+      li.textContent = `[${data.timestamp}] ${data.zona} → ${data.evento} (${data.prioridad})`;
+      document.getElementById("hallazgos").prepend(li);
+    };
+
+    // ⏱️ Estado inicial
+    actualizarEstado();
+  </script>
 </body>
 </html>
