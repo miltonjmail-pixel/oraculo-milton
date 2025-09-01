@@ -80,9 +80,9 @@ async def emitir_evento(evento):
 
 # 🌐 Endpoints
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return {"status": "Sistema oracular activo"}
+    return FileResponse("frontend/index.html")
 
 @app.get("/panel")
 def mostrar_panel():
