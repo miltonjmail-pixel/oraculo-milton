@@ -96,3 +96,8 @@ def login(username: str = Form(...), password: str = Form(...)):
 @app.get("/")
 def root():
     return {"status": "Sistema oracular activo"}
+from fastapi.responses import FileResponse
+
+@app.get("/panel")
+def mostrar_panel():
+    return FileResponse("frontend/index.html")
