@@ -72,6 +72,12 @@ async def evento_generator():
 async def emitir_evento(evento):
     await eventos_sse.put(evento)
 
+from fastapi.responses import FileResponse
+
+@app.get("/panel")
+def mostrar_panel():
+    return FileResponse("frontend/index.html")
+
 @app.get("/stream")
 async def stream():
     return StreamingResponse(evento_generator(), media_type="text/event-stream")
@@ -103,13 +109,3 @@ def login(username: str = Form(...), password: str = Form(...)):
 def root():
     return {"status": "Sistema oracular activo"}
 from fastapi.responses import FileResponse
-
-@app.get("/panel")
-def mostrar_panel():
-    return FileResponse("frontend/index.html")
-
-@app.post("/detener-patrullaje")
-def detener():
-    global patrullaje_activo
-    patrullaje_activo = False
-    return {"status": "Patrullaje detenido"}
