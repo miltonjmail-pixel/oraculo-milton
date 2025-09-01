@@ -3,13 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <title>Panel Oracular</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    #estado {
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    button {
+      margin-right: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+    ul#hallazgos {
+      margin-top: 2rem;
+      padding-left: 0;
+      list-style: none;
+    }
+    ul#hallazgos li {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-family: monospace;
+    }
+  </style>
 </head>
 <body>
   <h1>Panel Oracular Urbano</h1>
+
   <p id="estado">Verificando estado...</p>
+
   <button onclick="iniciarPatrullaje()">Iniciar Patrullaje</button>
   <button onclick="detenerPatrullaje()">Detener Patrullaje</button>
+
+  <h3>Hallazgos en tiempo real</h3>
   <ul id="hallazgos"></ul>
+
   <script src="app.js"></script>
 </body>
 </html>
