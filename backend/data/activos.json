@@ -1,0 +1,22 @@
+import json
+
+activos = [
+    {
+        "id": "WLT-001",
+        "tipo": "wallet",
+        "estado": "inactiva",
+        "saldo": 0.034,
+        "hash": "a3c75e9822a4"
+    },
+    {
+        "id": "ACC-778",
+        "tipo": "cuenta",
+        "estado": "inactiva",
+        "saldo": 12000,
+        "moneda": "COP",
+        "hash": "f9b2c1d7e3a1"
+    }
+]
+
+with open("backend/data/activos.json", "w") as f:
+    json.dump(activos, f, indent=2)
